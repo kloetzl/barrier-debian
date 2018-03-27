@@ -1,0 +1,5 @@
+barrier (2.0.0-RC2-1) UNRELEASED; urgency=low
+
+  * Initial release (Closes: #<bug>)
+
+ -- Fabian Klötzl <kloetzl@evolbio.mpg.de>  Mon, 12 Mar 2018 09:51:43 +0100

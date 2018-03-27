@@ -1,0 +1,20 @@
+Source: barrier
+Section: 
+Priority: optional
+Maintainer: Fabian Klötzl <kloetzl@evolbio.mpg.de>
+Uploaders: 
+Build-Depends: debhelper (>= 9),
+	cmake,
+	qt5-default,
+	libxtst-dev, libxinerama-dev, libice-dev, libxrandr-dev,
+	libavahi-compat-libdnssd-dev,
+	libcurl4-openssl-dev,
+	libssl1.0-dev
+Standards-Version: 3.9.6
+Homepage: https://github.com/debauchee/barrier
+
+Package: barrier
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: <short_description>
+ <long_description>

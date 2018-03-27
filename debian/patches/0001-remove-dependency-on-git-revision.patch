@@ -1,0 +1,21 @@
+From: =?utf-8?q?Fabian_Kl=C3=B6tzl?= <fabian@kloetzl.info>
+Date: Thu, 15 Mar 2018 09:59:55 +0100
+Subject: remove dependency on git revision
+
+---
+ cmake/Version.cmake | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/cmake/Version.cmake b/cmake/Version.cmake
+index ea565eb..8458968 100644
+--- a/cmake/Version.cmake
++++ b/cmake/Version.cmake
+@@ -36,6 +36,8 @@ if (NOT DEFINED BARRIER_VERSION_STAGE)
+     endif()
+ endif()
+ 
++set(BARRIER_REVISION "00deb1a2")
++
+ if (NOT DEFINED BARRIER_REVISION)
+     if (DEFINED ENV{GIT_COMMIT})
+         string (SUBSTRING $ENV{GIT_COMMIT} 0 8 BARRIER_REVISION)
