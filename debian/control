@@ -9,7 +9,8 @@ Build-Depends: debhelper (>= 9),
 	libxtst-dev, libxinerama-dev, libice-dev, libxrandr-dev,
 	libavahi-compat-libdnssd-dev,
 	libcurl4-openssl-dev,
-	libssl1.0-dev
+	libssl1.0-dev,
+	libgtest-dev
 Standards-Version: 3.9.6
 Homepage: https://github.com/debauchee/barrier
 
