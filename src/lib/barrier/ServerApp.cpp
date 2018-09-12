@@ -39,6 +39,8 @@
 #include "base/Log.h"
 #include "base/TMethodEventJob.h"
 #include "common/Version.h"
+#include "common/DataDirectories.h"
+#include "common/PathUtilities.h"
 
 #if SYSAPI_WIN32
 #include "arch/win32/ArchMiscWindows.h"
@@ -59,6 +61,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <fstream>
+#include <sstream>
 
 //
 // ServerApp
@@ -98,7 +101,7 @@ ServerApp::parseArgs(int argc, const char* const* argv)
             }
             catch (XSocketAddress& e) {
                 LOG((CLOG_PRINT "%s: %s" BYE,
-                    args().m_pname, e.what(), args().m_pname));
+                    args().m_exename.c_str(), e.what(), args().m_exename.c_str()));
                 m_bye(kExitArgs);
             }
         }
@@ -116,46 +119,36 @@ ServerApp::help()
     "      --display <display>  connect to the X server at <display>\n" \
     "      --no-xinitthreads    do not call XInitThreads()\n"
 #else
-#  define WINAPI_ARGS
-#  define WINAPI_INFO
+#  define WINAPI_ARGS ""
+#  define WINAPI_INFO ""
 #endif
 
-    char buffer[3000];
-    sprintf(
-        buffer,
-        "Usage: %s"
-        " [--address <address>]"
-        " [--config <pathname>]"
-        WINAPI_ARGS
-        HELP_SYS_ARGS
-        HELP_COMMON_ARGS
-        "\n\n"
-        "Start the barrier mouse/keyboard sharing server.\n"
-        "\n"
-        "  -a, --address <address>  listen for clients on the given address.\n"
-        "  -c, --config <pathname>  use the named configuration file instead.\n"
-        HELP_COMMON_INFO_1
-        WINAPI_INFO
-        HELP_SYS_INFO
-        HELP_COMMON_INFO_2
-        "\n"
-        "* marks defaults.\n"
-        "\n"
-        "The argument for --address is of the form: [<hostname>][:<port>].  The\n"
-        "hostname must be the address or hostname of an interface on the system.\n"
-        "The default is to listen on all interfaces.  The port overrides the\n"
-        "default port, %d.\n"
-        "\n"
-        "If no configuration file pathname is provided then the first of the\n"
-        "following to load successfully sets the configuration:\n"
-        "  %s\n"
-        "  %s\n",
-        args().m_pname, kDefaultPort,
-        ARCH->concatPath(ARCH->getUserDirectory(), USR_CONFIG_NAME).c_str(),
-        ARCH->concatPath(ARCH->getSystemDirectory(), SYS_CONFIG_NAME).c_str()
-    );
+    std::ostringstream buffer;
+    buffer << "Start the barrier server component." << std::endl
+           << std::endl
+           << "Usage: " << args().m_exename
+           << " [--address <address>]"
+           << " [--config <pathname>]"
+           << WINAPI_ARGS << HELP_SYS_ARGS << HELP_COMMON_ARGS << std::endl
+           << std::endl
+           << "Options:" << std::endl
+           << "  -a, --address <address>  listen for clients on the given address." << std::endl
+           << "  -c, --config <pathname>  use the named configuration file instead." << std::endl
+           << HELP_COMMON_INFO_1 << WINAPI_INFO << HELP_SYS_INFO << HELP_COMMON_INFO_2 << std::endl
+           << "Default options are marked with a *" << std::endl
+           << std::endl
+           << "The argument for --address is of the form: [<hostname>][:<port>].  The" << std::endl
+           << "hostname must be the address or hostname of an interface on the system." << std::endl
+           << "Placing brackets around an IPv6 address is required when also specifying " << std::endl
+           << "a port number and optional otherwise. The default is to listen on all" << std::endl
+           << "interfaces using port number " << kDefaultPort << "." << std::endl
+           << std::endl
+           << "If no configuration file pathname is provided then the first of the" << std::endl
+           << "following to load successfully sets the configuration:" << std::endl
+           << "  " << PathUtilities::concat(DataDirectories::profile(), SYS_CONFIG_NAME) << std::endl
+           << "  " << PathUtilities::concat(DataDirectories::systemconfig(), SYS_CONFIG_NAME) << std::endl;
 
-    LOG((CLOG_PRINT "%s", buffer));
+    LOG((CLOG_PRINT "%s", buffer.str().c_str()));
 }
 
 void
@@ -190,11 +183,10 @@ ServerApp::loadConfig()
 
     // load the default configuration if no explicit file given
     else {
-        // get the user's home directory
-        String path = ARCH->getUserDirectory();
+        String path = DataDirectories::profile();
         if (!path.empty()) {
             // complete path
-            path = ARCH->concatPath(path, USR_CONFIG_NAME);
+            path = PathUtilities::concat(path, USR_CONFIG_NAME);
 
             // now try loading the user's configuration
             if (loadConfig(path)) {
@@ -204,9 +196,9 @@ ServerApp::loadConfig()
         }
         if (!loaded) {
             // try the system-wide config file
-            path = ARCH->getSystemDirectory();
+            path = DataDirectories::systemconfig();
             if (!path.empty()) {
-                path = ARCH->concatPath(path, SYS_CONFIG_NAME);
+                path = PathUtilities::concat(path, SYS_CONFIG_NAME);
                 if (loadConfig(path)) {
                     loaded            = true;
                     args().m_configFile = path;
@@ -216,7 +208,7 @@ ServerApp::loadConfig()
     }
 
     if (!loaded) {
-        LOG((CLOG_PRINT "%s: no configuration available", args().m_pname));
+        LOG((CLOG_PRINT "%s: no configuration available", args().m_exename.c_str()));
         m_bye(kExitConfig);
     }
 }
@@ -515,6 +507,16 @@ ServerApp::openServerScreen()
     return screen;
 }
 
+static const char* const family_string(IArchNetwork::EAddressFamily family)
+{
+    if (family == IArchNetwork::kINET)
+        return "IPv4";
+    if (family == IArchNetwork::kINET6)
+        // assume IPv6 sockets are setup to support IPv4 traffic as well
+        return "IPv4/IPv6";
+    return "Unknown";
+}
+
 bool 
 ServerApp::startServer()
 {
@@ -540,13 +542,15 @@ ServerApp::startServer()
     double retryTime;
     ClientListener* listener = NULL;
     try {
-        listener   = openClientListener(args().m_config->getBarrierAddress());
+        auto listenAddress = args().m_config->getBarrierAddress();
+        auto family = family_string(ARCH->getAddrFamily(listenAddress.getAddress()));
+        listener   = openClientListener(listenAddress);
         m_server   = openServer(*args().m_config, m_primaryClient);
         listener->setServer(m_server);
         m_server->setListener(listener);
         m_listener = listener;
         updateStatus();
-        LOG((CLOG_NOTE "started server, waiting for clients"));
+        LOG((CLOG_NOTE "started server (%s), waiting for clients", family));
         m_serverState = kStarted;
         return true;
     }
@@ -789,7 +793,7 @@ ServerApp::runInner(int argc, char** argv, ILogOutputter* outputter, StartupFunc
     // general initialization
     m_barrierAddress = new NetworkAddress;
     args().m_config         = new Config(m_events);
-    args().m_pname          = ARCH->getBasename(argv[0]);
+    args().m_exename = PathUtilities::basename(argv[0]);
 
     // install caller's output filter
     if (outputter != NULL) {

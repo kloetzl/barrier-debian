@@ -1,5 +1,9 @@
 cmake_minimum_required (VERSION 3.4)
 
+set (BARRIER_VERSION_MAJOR 2)
+set (BARRIER_VERSION_MINOR 1)
+set (BARRIER_VERSION_PATCH 0)
+
 #
 # Barrier Version
 #
@@ -40,24 +44,24 @@ if (NOT DEFINED BARRIER_REVISION)
     if (DEFINED ENV{GIT_COMMIT})
         string (SUBSTRING $ENV{GIT_COMMIT} 0 8 BARRIER_REVISION)
     else()
-        execute_process (
-            COMMAND git rev-parse --short=8 HEAD
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            OUTPUT_VARIABLE BARRIER_REVISION
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
+        find_program (GIT_BINARY git)
+        if (NOT GIT_BINARY STREQUAL "GIT_BINARY-NOTFOUND")
+            execute_process (
+                COMMAND git rev-parse --short=8 HEAD
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                OUTPUT_VARIABLE BARRIER_REVISION
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+        endif()
     endif()
 endif()
 
-if (DEFINED BARRIER_REVISION)
-    string(LENGTH ${BARRIER_REVISION} BARRIER_REVISION_LENGTH)
-    if (NOT ((BARRIER_REVISION MATCHES "^[a-f0-9]+") AND (BARRIER_REVISION_LENGTH EQUAL "8")))
-        message (FATAL_ERROR "BARRIER_REVISION ('${BARRIER_REVISION}') should be a short commit hash")
-    endif()
-    unset (BARRIER_REVISION_LENGTH)
-else()
-	set (BARRIER_REVISION "0badc0de")
+string(LENGTH "${BARRIER_REVISION}" BARRIER_REVISION_LENGTH)
+if (NOT BARRIER_REVISION_LENGTH EQUAL 8 OR NOT BARRIER_REVISION MATCHES "^[a-f0-9]+")
+    set (BARRIER_REVISION "00000000")
+    message (WARNING "revision not found. setting to ${BARRIER_REVISION}")
 endif()
+unset (BARRIER_REVISION_LENGTH)
 
 if (DEFINED ENV{BUILD_NUMBER})
     set (BARRIER_BUILD_NUMBER $ENV{BUILD_NUMBER})

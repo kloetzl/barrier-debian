@@ -6,17 +6,17 @@ set (CMAKE_AUTORCC ON)
 set (CMAKE_AUTOUIC ON)
 set (CMAKE_INCLUDE_CURRENT_DIR ON)
 
-file (GLOB LEGACY_GUI_SOURCE_FILES src/*.cpp src/*.h)
-file (GLOB LEGACY_GUI_UI_FILES src/*.ui)
+file (GLOB GUI_SOURCE_FILES src/*.cpp src/*.h)
+file (GLOB GUI_UI_FILES src/*.ui)
 
 if (WIN32)
-    set (LEGACY_GUI_RC_FILES res/win/Barrier.rc)
+    set (GUI_RC_FILES res/win/Barrier.rc)
 endif()
 
 add_executable (barrier WIN32
-    ${LEGACY_GUI_SOURCE_FILES}
-    ${LEGACY_GUI_UI_FILES}
-    ${LEGACY_GUI_RC_FILES}
+    ${GUI_SOURCE_FILES}
+    ${GUI_UI_FILES}
+    ${GUI_RC_FILES}
     res/Barrier.qrc
 )
 
@@ -44,6 +44,8 @@ endif()
 if (HAVE_X11)
     target_link_libraries (barrier X11)
 endif()
+
+target_link_libraries (barrier common)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     install (TARGETS barrier DESTINATION ${BARRIER_BUNDLE_BINARY_DIR})

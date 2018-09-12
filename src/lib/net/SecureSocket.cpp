@@ -23,6 +23,7 @@
 #include "mt/Lock.h"
 #include "arch/XArch.h"
 #include "base/Log.h"
+#include "common/DataDirectories.h"
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -56,8 +57,9 @@ struct Ssl {
 
 SecureSocket::SecureSocket(
         IEventQueue* events,
-        SocketMultiplexer* socketMultiplexer) :
-    TCPSocket(events, socketMultiplexer),
+        SocketMultiplexer* socketMultiplexer,
+        IArchNetwork::EAddressFamily family) :
+    TCPSocket(events, socketMultiplexer, family),
     m_ssl(nullptr),
     m_secureReady(false),
     m_fatal(false)
@@ -698,7 +700,7 @@ SecureSocket::verifyCertFingerprint()
     String trustedServersFilename;
     trustedServersFilename = barrier::string::sprintf(
         "%s/%s/%s",
-        ARCH->getProfileDirectory().c_str(),
+        DataDirectories::profile().c_str(),
         kFingerprintDirName,
         kFingerprintTrustedServersFilename);
 

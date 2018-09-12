@@ -21,10 +21,10 @@
 #include "barrier/App.h"
 #include "barrier/ServerArgs.h"
 #include "barrier/ClientArgs.h"
-#include "barrier/ToolArgs.h"
 #include "barrier/ArgsBase.h"
 #include "base/Log.h"
 #include "base/String.h"
+#include "common/PathUtilities.h"
 
 #ifdef WINAPI_MSWINDOWS
 #include <VersionHelpers.h>
@@ -62,7 +62,7 @@ ArgParser::parseServerArgs(ServerArgs& args, int argc, const char* const* argv)
             args.m_configFile = argv[++i];
         }
         else {
-            LOG((CLOG_PRINT "%s: unrecognized option `%s'" BYE, args.m_pname, argv[i], args.m_pname));
+            LOG((CLOG_PRINT "%s: unrecognized option `%s'" BYE, args.m_exename.c_str(), argv[i], args.m_exename.c_str()));
             return false;
         }
     }
@@ -107,15 +107,18 @@ ArgParser::parseClientArgs(ClientArgs& args, int argc, const char* const* argv)
                 return true;
             }
 
-            LOG((CLOG_PRINT "%s: unrecognized option `%s'" BYE, args.m_pname, argv[i], args.m_pname));
+            LOG((CLOG_PRINT "%s: unrecognized option `%s'" BYE, args.m_exename.c_str(), argv[i], args.m_exename.c_str()));
             return false;
         }
     }
 
+    if (args.m_shouldExit)
+        return true;
+
     // exactly one non-option argument (server-address)
     if (i == argc) {
         LOG((CLOG_PRINT "%s: a server address or name is required" BYE,
-            args.m_pname, args.m_pname));
+            args.m_exename.c_str(), args.m_exename.c_str()));
         return false;
     }
 
@@ -166,46 +169,6 @@ ArgParser::parsePlatformArg(ArgsBase& argsBase, const int& argc, const char* con
     // no options for carbon
     return false;
 #endif
-}
-
-bool
-ArgParser::parseToolArgs(ToolArgs& args, int argc, const char* const* argv)
-{
-    for (int i = 1; i < argc; ++i) {
-        if (isArg(i, argc, argv, NULL, "--get-active-desktop", 0)) {
-            args.m_printActiveDesktopName = true;
-            return true;
-        }
-        else if (isArg(i, argc, argv, NULL, "--login-auth", 0)) {
-            args.m_loginAuthenticate = true;
-            return true;
-        }
-        else if (isArg(i, argc, argv, NULL, "--get-installed-dir", 0)) {
-            args.m_getInstalledDir = true;
-            return true;
-        }
-        else if (isArg(i, argc, argv, NULL, "--get-profile-dir", 0)) {
-            args.m_getProfileDir = true;
-            return true;
-        }
-        else if (isArg(i, argc, argv, NULL, "--get-arch", 0)) {
-            args.m_getArch = true;
-            return true;
-        }
-        else if (isArg(i, argc, argv, NULL, "--notify-activation", 0)) {
-            args.m_notifyActivation = true;
-            return true;
-        }
-        else if (isArg(i, argc, argv, NULL, "--notify-update", 0)) {
-            args.m_notifyUpdate = true;
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-
-    return false;
 }
 
 bool
@@ -350,7 +313,7 @@ ArgParser::isArg(
             // match.  check args left.
             if (argi + minRequiredParameters >= argc) {
                 LOG((CLOG_PRINT "%s: missing arguments for `%s'" BYE,
-                    argsBase().m_pname, argv[argi], argsBase().m_pname));
+                    argsBase().m_exename.c_str(), argv[argi], argsBase().m_exename.c_str()));
                 argsBase().m_shouldExit = true;
                 return false;
             }
@@ -493,7 +456,7 @@ void
 ArgParser::updateCommonArgs(const char* const* argv)
 {
     argsBase().m_name = ARCH->getHostName();
-    argsBase().m_pname = ARCH->getBasename(argv[0]);
+    argsBase().m_exename = PathUtilities::basename(argv[0]);
 }
 
 bool
@@ -507,7 +470,7 @@ ArgParser::checkUnexpectedArgs()
         LOG((CLOG_ERR
             "the --daemon argument is not supported on windows. "
             "instead, install %s as a service (--service install)",
-            argsBase().m_pname));
+            argsBase().m_exename.c_str()));
         return true;
     }
 #endif

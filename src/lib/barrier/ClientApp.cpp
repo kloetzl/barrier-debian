@@ -40,10 +40,7 @@
 #include "base/TMethodJob.h"
 #include "base/Log.h"
 #include "common/Version.h"
-
-#if SYSAPI_WIN32
-#include "arch/win32/ArchMiscWindows.h"
-#endif
+#include "common/PathUtilities.h"
 
 #if WINAPI_MSWINDOWS
 #include "platform/MSWindowsScreen.h"
@@ -59,6 +56,7 @@
 
 #include <iostream>
 #include <stdio.h>
+#include <sstream>
 
 #define RETRY_TIME 1.0
 
@@ -97,7 +95,7 @@ ClientApp::parseArgs(int argc, const char* const* argv)
                 // Priddy.
                 if (!args().m_restartable || e.getError() == XSocketAddress::kBadPort) {
                     LOG((CLOG_PRINT "%s: %s" BYE,
-                        args().m_pname, e.what(), args().m_pname));
+                        args().m_exename.c_str(), e.what(), args().m_exename.c_str()));
                     m_bye(kExitFailed);
                 }
             }
@@ -115,38 +113,30 @@ ClientApp::help()
     "      --display <display>  connect to the X server at <display>\n" \
     "      --no-xinitthreads    do not call XInitThreads()\n"
 #else
-#  define WINAPI_ARG
-#  define WINAPI_INFO
+#  define WINAPI_ARG ""
+#  define WINAPI_INFO ""
 #endif
 
-    char buffer[2000];
-    sprintf(
-        buffer,
-        "Usage: %s"
-        " [--yscroll <delta>]"
-        WINAPI_ARG
-        HELP_SYS_ARGS
-        HELP_COMMON_ARGS
-        " <server-address>"
-        "\n\n"
-        "Connect to a barrier mouse/keyboard sharing server.\n"
-        "\n"
-        HELP_COMMON_INFO_1
-        WINAPI_INFO
-        HELP_SYS_INFO
-        "      --yscroll <delta>    defines the vertical scrolling delta, which is\n"
-        "                             120 by default.\n"
-        HELP_COMMON_INFO_2
-        "\n"
-        "* marks defaults.\n"
-        "\n"
-        "The server address is of the form: [<hostname>][:<port>].  The hostname\n"
-        "must be the address or hostname of the server.  The port overrides the\n"
-        "default port, %d.\n",
-        args().m_pname, kDefaultPort
-    );
+    std::ostringstream buffer;
+    buffer << "Start the barrier client and connect to a remote server component." << std::endl
+           << std::endl
+           << "Usage: " << args().m_exename << " [--yscroll <delta>]" <<  WINAPI_ARG << HELP_SYS_ARGS
+           << HELP_COMMON_ARGS << " <server-address>" << std::endl
+           << std::endl
+           << "Options:" << std::endl
+           << HELP_COMMON_INFO_1 << WINAPI_INFO << HELP_SYS_INFO
+           << "      --yscroll <delta>    defines the vertical scrolling delta, which is" << std::endl
+           << "                           120 by default." << std::endl
+           << HELP_COMMON_INFO_2
+           << std::endl
+           << "Default options are marked with a *" << std::endl
+           << std::endl
+           << "The server address is of the form: [<hostname>][:<port>]. The hostname" << std::endl
+           << "must be the address or hostname of the server. Placing brackets around" << std::endl
+           << "an IPv6 address is required when also specifying a port number and " << std::endl
+           << "optional otherwise. The default port number is " << kDefaultPort << "." << std::endl;
 
-    LOG((CLOG_PRINT "%s", buffer));
+    LOG((CLOG_PRINT "%s", buffer.str().c_str()));
 }
 
 const char*
@@ -527,7 +517,7 @@ ClientApp::runInner(int argc, char** argv, ILogOutputter* outputter, StartupFunc
 {
     // general initialization
     m_serverAddress = new NetworkAddress;
-    args().m_pname         = ARCH->getBasename(argv[0]);
+    args().m_exename = PathUtilities::basename(argv[0]);
 
     // install caller's output filter
     if (outputter != NULL) {

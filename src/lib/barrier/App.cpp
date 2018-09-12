@@ -21,9 +21,7 @@
 #include "base/Log.h"
 #include "common/Version.h"
 #include "barrier/protocol_types.h"
-#include "arch/Arch.h"
 #include "base/XBase.h"
-#include "arch/XArch.h"
 #include "base/log_outputters.h"
 #include "barrier/XBarrier.h"
 #include "barrier/ArgsBase.h"
@@ -32,9 +30,9 @@
 #include "ipc/IpcMessage.h"
 #include "ipc/Ipc.h"
 #include "base/EventQueue.h"
+#include "common/DataDirectories.h"
 
 #if SYSAPI_WIN32
-#include "arch/win32/ArchMiscWindows.h"
 #include "base/IEventQueue.h"
 #include "base/TMethodJob.h"
 #endif
@@ -81,18 +79,9 @@ App::~App()
 void
 App::version()
 {
-    char buffer[500];
-    sprintf(
-        buffer,
-        "%s %s, protocol version %d.%d\n%s",
-        argsBase().m_pname,
-        kVersion,
-        kProtocolMajorVersion,
-        kProtocolMinorVersion,
-        kCopyright
-        );
-
-    std::cout << buffer << std::endl;
+    std::cout << argsBase().m_exename << " " << kVersion << std::endl;
+    std::cout <<"Protocol version " << kProtocolMajorVersion << "." << kProtocolMinorVersion << std::endl;
+    std::cout << kCopyright << std::endl;
 }
 
 int
@@ -175,13 +164,12 @@ App::initApp(int argc, const char** argv)
     // parse command line
     parseArgs(argc, argv);
     
-    ARCH->setProfileDirectory(argsBase().m_profileDirectory);
-    ARCH->setPluginDirectory(argsBase().m_pluginDirectory);
+    DataDirectories::profile(argsBase().m_profileDirectory);
 
     // set log filter
     if (!CLOG->setFilter(argsBase().m_logFilter)) {
         LOG((CLOG_PRINT "%s: unrecognized log level `%s'" BYE,
-            argsBase().m_pname, argsBase().m_logFilter, argsBase().m_pname));
+            argsBase().m_exename.c_str(), argsBase().m_logFilter, argsBase().m_exename.c_str()));
         m_bye(kExitArgs);
     }
     loggingFilterWarning();
