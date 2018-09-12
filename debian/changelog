@@ -1,5 +1,8 @@
-barrier (2.0.0-RC2-1) UNRELEASED; urgency=low
+barrier (2.1.1-1ubuntu1) UNRELEASED; urgency=low
 
+  [ Fabian Klötzl ]
   * Initial release (Closes: #<bug>)
+  * import 2.0.0-RC2
+  * update to 2.1.1
 
- -- Fabian Klötzl <kloetzl@evolbio.mpg.de>  Mon, 12 Mar 2018 09:51:43 +0100
+ -- Fabian Klötzl <fabian@kloetzl.info>  Wed, 12 Sep 2018 09:51:59 +0000
